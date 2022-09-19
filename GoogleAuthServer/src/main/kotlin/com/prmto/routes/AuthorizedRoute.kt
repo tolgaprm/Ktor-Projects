@@ -9,11 +9,11 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Route.authorizedRoute() {
-    authenticate("auth-session"){
+    authenticate("auth-session") {
         get(Endpoint.Authorized.path) {
             call.respond(
-                message = ApiResponse(success = true),
-                status = HttpStatusCode.OK
+                message = ApiResponse(success = true, user = null, message = null),
+                status = HttpStatusCode.OK,
             )
         }
     }

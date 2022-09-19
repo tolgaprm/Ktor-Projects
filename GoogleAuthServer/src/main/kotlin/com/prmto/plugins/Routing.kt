@@ -12,6 +12,7 @@ fun Application.configureRouting() {
         rootRoute()
         tokenVerificationRoute(application, userDataSource)
         getUserInfoRoute(application, userDataSource)
+        updateUserInfoRoute(application,userDataSource)
         unauthorizedRoute()
         authorizedRoute()
 

@@ -26,7 +26,8 @@ fun Route.getUserInfoRoute(
                     call.respond(
                         message = ApiResponse(
                             success = true,
-                            user = userDataSource.getUserInfo(userId = userSession.id)
+                            user = userDataSource.getUserInfo(userId = userSession.id),
+                            message = null
                         ),
                         status = HttpStatusCode.OK
                     )
