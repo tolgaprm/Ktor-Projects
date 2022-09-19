@@ -6,7 +6,9 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.prmto.domain.model.ApiRequest
 import com.prmto.domain.model.Endpoint
+import com.prmto.domain.model.User
 import com.prmto.domain.model.UserSession
+import com.prmto.domain.model.repository.UserDataSource
 import com.prmto.util.Constants.AUDIENCE
 import com.prmto.util.Constants.ISSUER
 import io.ktor.server.application.*
@@ -14,8 +16,12 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
+import io.ktor.util.pipeline.*
 
-fun Route.tokenVerificationRoute(app: Application) {
+fun Route.tokenVerificationRoute(
+    app: Application,
+    userDataSource: UserDataSource
+) {
     post(Endpoint.TokenVerification.path) {
 
         val request = call.receive<ApiRequest>()
@@ -23,12 +29,11 @@ fun Route.tokenVerificationRoute(app: Application) {
         if (request.tokenId.isNotEmpty()) {
             val result = verifyGoogleTokenId(tokenId = request.tokenId)
             if (result != null) {
-                val name = result.payload["name"].toString()
-                val emailAddress = result.payload["email"].toString()
-                app.log.info("TOKEN SUCCESSFULLY VERIFIED $name $emailAddress")
-
-                call.sessions.set(UserSession(id = "hgsfsf", name = "Tolga"))
-                call.respondRedirect(Endpoint.Authorized.path)
+                saveUserToDatabase(
+                    app = app,
+                    result = result,
+                    userDataSource = userDataSource
+                )
             } else {
                 app.log.info("TOKEN VERIFICATION FAILED")
                 call.respondRedirect(Endpoint.Unauthorized.path)
@@ -38,6 +43,36 @@ fun Route.tokenVerificationRoute(app: Application) {
             call.respondRedirect(Endpoint.Unauthorized.path)
         }
     }
+}
+
+private suspend fun PipelineContext<Unit, ApplicationCall>.saveUserToDatabase(
+    app: Application,
+    result: GoogleIdToken,
+    userDataSource: UserDataSource
+) {
+
+    val sub = result.payload["sub"].toString()
+    val emailAddress = result.payload["email"].toString()
+    val name = result.payload["name"].toString()
+    val profilePhoto = result.payload["picture"].toString()
+
+    val user = User(
+        id = sub,
+        name = name,
+        emailAddress = emailAddress,
+        profilePhoto = profilePhoto
+    )
+
+    val response = userDataSource.saveUserInfo(user = user)
+    if (response){
+        app.log.info("USER SUCCESSFULLY SAVED/RETRIEVE")
+        call.sessions.set(UserSession(id = "hgsfsf", name = "Tolga"))
+        call.respondRedirect(Endpoint.Authorized.path)
+    }else{
+        app.log.info("ERROR SAVING THE USER")
+        call.respondRedirect(Endpoint.Unauthorized.path)
+    }
+
 }
 
 fun verifyGoogleTokenId(tokenId: String): GoogleIdToken? {
