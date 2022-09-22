@@ -1,0 +1,2 @@
+web: build/install/com.prmto.googleauthserver/bin/com.prmto.googleauthserver
+worker: python scheduler.py
